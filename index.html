@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>القرآن المتزامن - Synchronized Quran</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Arabic Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-amiri">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">القرآن المتزامن</h1>
+                    <span class="ml-3 text-sm text-gray-500">Synchronized Quran</span>
+                </div>
+                
+                <!-- Connection Status -->
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <span id="statusText" class="text-sm text-gray-600">غير متصل</span>
+                    </div>
+                    
+                    <!-- Room Controls -->
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        <input type="text" id="roomId" placeholder="رقم الغرفة" 
+                               class="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="createRoom" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            إنشاء غرفة
+                        </button>
+                        <button id="joinRoom" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                            انضمام
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- Left Sidebar - Controls -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">التحكم</h3>
+                    
+                    <!-- Navigation Controls -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">السورة</label>
+                            <select id="surahSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">اختر السورة</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الصفحة</label>
+                            <div class="flex space-x-2 space-x-reverse">
+                                <button id="prevPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">السابق</button>
+                                <input type="number" id="pageInput" min="1" max="604" 
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center">
+                                <button id="nextPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">التالي</button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الترجمة</label>
+                            <select id="translationSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">اختر الترجمة</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">القارئ</label>
+                            <select id="reciterSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">اختر القارئ</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Audio Controls -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <button id="playPause" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    <span id="playIcon">▶️</span>
+                                </button>
+                                <button id="stopAudio" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                                    ⏹️
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Controller Message -->
+                        <div class="pt-4 border-t border-gray-200">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">رسالة للمستمعين</label>
+                            <textarea id="controllerMessage" placeholder="اكتب رسالة للمستمعين..." 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"></textarea>
+                            <button id="sendMessage" class="mt-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                                إرسال
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Participants List -->
+                <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">المشاركون</h3>
+                    <ul id="participantsList" class="space-y-2">
+                        <!-- Participants will be added here -->
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Center - Quran Text -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="currentSurah" class="text-xl font-bold text-gray-900">سورة الفاتحة</h2>
+                        <div class="text-sm text-gray-500">
+                            <span id="currentPage">الصفحة 1</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quran Text Container -->
+                    <div id="quranText" class="quran-text text-2xl leading-relaxed text-gray-900 min-h-96">
+                        <!-- Quran text will be loaded here -->
+                        <div class="text-center text-gray-500 py-20">
+                            <p>اختر سورة أو صفحة للبدء</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar - Translation -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">الترجمة</h3>
+                    
+                    <!-- Selected Ayah Translation -->
+                    <div id="selectedAyahTranslation" class="mb-4 p-4 bg-blue-50 rounded-lg">
+                        <div class="text-sm text-gray-600 mb-2">الآية المحددة:</div>
+                        <div id="selectedAyahNumber" class="font-semibold text-blue-800 mb-2"></div>
+                        <div id="selectedAyahText" class="text-gray-800 leading-relaxed"></div>
+                    </div>
+                    
+                    <!-- Controller Messages -->
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">رسائل المرشد</h4>
+                        <div id="controllerMessages" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- Messages will appear here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Audio Status -->
+                    <div class="pt-4 border-t border-gray-200">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">حالة الصوت</h4>
+                        <div id="audioStatus" class="text-sm text-gray-600">
+                            <div>القارئ: <span id="currentReciter">غير محدد</span></div>
+                            <div>الحالة: <span id="audioState">متوقف</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-700">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/quran-api.js"></script>
+    <script src="js/webrtc-manager.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/state-manager.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
