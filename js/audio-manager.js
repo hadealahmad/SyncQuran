@@ -118,7 +118,30 @@ class AudioManager {
             this.currentAyah = ayahNumber;
             this.currentSurah = surahNumber;
             
-            const audioUrl = this.getAyahAudioUrl(ayahNumber);
+            const apiUrl = this.getAyahAudioUrl(ayahNumber);
+            console.log('Fetching audio from API:', apiUrl);
+            
+            // First fetch the API response to get the actual audio URL
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('API response:', data);
+            
+            // Extract the audio URL from the response
+            let audioUrl = null;
+            if (data.data && data.data.audio) {
+                audioUrl = data.data.audio;
+            } else if (data.data && data.data.audioFiles && data.data.audioFiles.length > 0) {
+                audioUrl = data.data.audioFiles[0].url;
+            } else {
+                throw new Error('No audio URL found in API response');
+            }
+            
+            console.log('Audio URL:', audioUrl);
+            
             await this.loadAudio(audioUrl);
             await this.play();
             
@@ -251,6 +274,8 @@ class AudioManager {
      * Get audio URL for specific ayah
      */
     getAyahAudioUrl(ayahNumber) {
+        // The Quran Cloud API returns JSON with audio URL, not direct audio
+        // We need to fetch the JSON first, then get the audio URL
         return `https://api.alquran.cloud/v1/ayah/${ayahNumber}/${this.currentReciter}`;
     }
     
@@ -305,6 +330,14 @@ class AudioManager {
             reciter: this.currentReciter,
             timestamp: this.audio.currentTime
         };
+        
+        console.log('Audio manager updating state:', this.audioState);
+        
+        // Notify state manager if callback is set
+        if (this.callbacks && this.callbacks.onAudioStateChange) {
+            console.log('Notifying state manager of audio state change');
+            this.callbacks.onAudioStateChange(this.audioState);
+        }
     }
     
     /**
@@ -318,7 +351,10 @@ class AudioManager {
     /**
      * Apply audio state from synchronization
      */
-    applyAudioState(audioState) {
+    async applyAudioState(audioState) {
+        console.log('Client applying audio state:', audioState);
+        console.log('Client isController:', this.isController);
+        
         if (!this.isController) {
             // Only listeners should apply external audio state
             this.currentReciter = audioState.reciter;
@@ -326,8 +362,16 @@ class AudioManager {
             this.currentSurah = audioState.currentSurah;
             this.currentPage = audioState.currentPage;
             
-            if (audioState.isPlaying && !this.isPlaying) {
-                this.play();
+            console.log('Client audio state updated - currentAyah:', this.currentAyah, 'isPlaying:', audioState.isPlaying);
+            
+            // If there's a current ayah and we should be playing, load and play it
+            if (audioState.isPlaying && this.currentAyah) {
+                try {
+                    console.log('Client loading audio for ayah:', this.currentAyah);
+                    await this.playAyah(this.currentAyah, this.currentSurah);
+                } catch (error) {
+                    console.error('Error playing ayah on client:', error);
+                }
             } else if (!audioState.isPlaying && this.isPlaying) {
                 this.pause();
             }

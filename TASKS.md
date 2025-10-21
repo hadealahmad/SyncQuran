@@ -36,6 +36,20 @@ A WebRTC-based synchronized Quran reading application that allows a controller t
 ## In Progress Tasks
 
 - [x] Test the application functionality
+- [x] Fix data channel configuration for reliable message delivery
+- [x] Fix audio API integration to properly fetch audio URLs
+- [x] Implement audio synchronization between host and clients
+- [x] Fix surah content synchronization for clients
+- [x] Fix audio state timing issues
+- [x] Fix audio state synchronization between audio manager and state manager
+- [x] Fix ayah highlighting visual display with CSS specificity and timing
+- [x] Fix translation text display on client side
+- [x] Fix translation synchronization to sidebar instead of under ayahs
+- [x] Replace custom signaling server with free PeerJS service
+- [x] Implement fallback mechanism for when PeerJS servers are unavailable
+- [x] Implement manual peer ID sharing system for room discovery
+- [x] Replace browser prompts with modern modal interface
+- [x] Add easy-to-copy buttons for room information
 
 ## Future Tasks
 
@@ -128,7 +142,8 @@ The application will be built as a client-side web application using:
 - index.html - Main application HTML structure ✅
 - style.css - Custom styling and Arabic RTL support ✅
 - js/quran-api.js - Quran Cloud API integration ✅
-- js/webrtc-manager.js - WebRTC networking (adapted from game) ✅
+- js/webrtc-manager-peerjs.js - WebRTC networking using free PeerJS service ✅
+- js/webrtc-manager.js - Original WebRTC networking (kept as backup) ✅
 - js/ui-manager.js - UI state and component management ✅
 - js/audio-manager.js - Audio playback and synchronization ✅
 - js/state-manager.js - Application state management ✅

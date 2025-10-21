@@ -5,10 +5,17 @@
 class QuranApp {
     constructor() {
         this.quranAPI = new QuranAPI();
-        this.webrtcManager = new WebRTCManager();
+        this.webrtcManager = new WebRTCManagerPeerJS();
         this.audioManager = new AudioManager();
         this.uiManager = new UIManager();
         this.stateManager = new StateManager();
+        
+        // Set up audio manager callback to update state manager
+        this.audioManager.setCallbacks({
+            onAudioStateChange: (audioState) => {
+                this.stateManager.setAudioState(audioState);
+            }
+        });
         
         this.isInitialized = false;
         this.isController = false;
@@ -64,6 +71,7 @@ class QuranApp {
             },
             
             onAudioStateUpdate: (audioState) => {
+                console.log('Received audio state update:', audioState);
                 this.applyAudioState(audioState);
             }
         });
@@ -74,8 +82,8 @@ class QuranApp {
                 this.createRoom(userName);
             },
             
-            onJoinRoom: (roomId, userName) => {
-                this.joinRoom(roomId, userName);
+            onJoinRoom: (roomId, userName, hostPeerId) => {
+                this.joinRoom(roomId, userName, hostPeerId);
             },
             
             onSurahChange: (surahNumber) => {
@@ -86,8 +94,8 @@ class QuranApp {
                 this.loadPage(pageNumber);
             },
             
-            onAyahClick: (ayah, translationAyah) => {
-                this.handleAyahClick(ayah, translationAyah);
+            onAyahClick: async (ayah, translationAyah) => {
+                await this.handleAyahClick(ayah, translationAyah);
             },
             
             onTranslationChange: (translation) => {
@@ -108,7 +116,8 @@ class QuranApp {
             
             onControllerMessage: (message) => {
                 this.sendControllerMessage(message);
-            }
+            },
+            
         });
         
         // State manager callbacks
@@ -185,20 +194,33 @@ class QuranApp {
             
             console.log('Room created:', roomId);
             
+            // Show the host's peer ID in a modal
+            const hostPeerId = this.webrtcManager.getLocalUser()?.id;
+            if (hostPeerId) {
+                this.uiManager.showHostPeerIdModal(roomId, hostPeerId);
+            }
+            
+            // Show room information in the navbar
+            this.uiManager.showRoomInfo(roomId, hostPeerId);
+            
         } catch (error) {
             console.error('Error creating room:', error);
             this.uiManager.showError('خطأ في إنشاء الغرفة');
         }
     }
     
-    async joinRoom(roomId, userName) {
+    async joinRoom(roomId, userName, hostPeerId) {
         try {
-            await this.webrtcManager.joinRoom(roomId, userName);
+            await this.webrtcManager.joinRoom(roomId, userName, hostPeerId);
             this.isController = false;
             this.audioManager.setController(false);
             this.uiManager.setController(false);
             
             console.log('Joined room:', roomId);
+            
+            // Show room information in the navbar
+            const userPeerId = this.webrtcManager.getLocalUser()?.id;
+            this.uiManager.showRoomInfo(roomId, userPeerId);
             
         } catch (error) {
             console.error('Error joining room:', error);
@@ -223,12 +245,36 @@ class QuranApp {
             // Broadcast state if controller
             if (this.isController) {
                 this.broadcastQuranState();
+                console.log('Broadcasting Quran state after loading surah');
             }
             
             this.stateManager.setLoading(false);
             
         } catch (error) {
             console.error('Error loading surah:', error);
+            this.stateManager.setLoading(false);
+            this.uiManager.showError('خطأ في تحميل السورة');
+        }
+    }
+    
+    // Load surah with specific translation (for clients)
+    async loadSurahWithTranslation(surahNumber, translation) {
+        try {
+            this.stateManager.setLoading(true);
+            
+            const surahData = await this.quranAPI.loadSurahData(surahNumber, translation);
+            
+            this.stateManager.setCurrentSurah(surahNumber, surahData.surah.name, surahData.surah.englishName);
+            this.stateManager.setArabicText(surahData.arabicText);
+            this.stateManager.setTranslationText(surahData.translationText);
+            
+            this.uiManager.displayQuranText(surahData.arabicText, surahData.translationText);
+            this.uiManager.updateSurahTitle(surahData.surah.name, surahNumber);
+            
+            this.stateManager.setLoading(false);
+            
+        } catch (error) {
+            console.error('Error loading surah with translation:', error);
             this.stateManager.setLoading(false);
             this.uiManager.showError('خطأ في تحميل السورة');
         }
@@ -251,6 +297,7 @@ class QuranApp {
             // Broadcast state if controller
             if (this.isController) {
                 this.broadcastQuranState();
+                console.log('Broadcasting Quran state after loading page');
             }
             
             this.stateManager.setLoading(false);
@@ -262,19 +309,45 @@ class QuranApp {
         }
     }
     
+    // Load page with specific translation (for clients)
+    async loadPageWithTranslation(pageNumber, translation) {
+        try {
+            this.stateManager.setLoading(true);
+            
+            const pageData = await this.quranAPI.loadPageData(pageNumber, translation);
+            
+            this.stateManager.setCurrentPage(pageNumber);
+            this.stateManager.setArabicText(pageData.arabicText);
+            this.stateManager.setTranslationText(pageData.translationText);
+            
+            this.uiManager.displayQuranText(pageData.arabicText, pageData.translationText);
+            this.uiManager.updatePageTitle(pageNumber);
+            this.uiManager.updatePageInput(pageNumber);
+            
+            this.stateManager.setLoading(false);
+            
+        } catch (error) {
+            console.error('Error loading page with translation:', error);
+            this.stateManager.setLoading(false);
+            this.uiManager.showError('خطأ في تحميل الصفحة');
+        }
+    }
+    
     // Ayah handling
-    handleAyahClick(ayah, translationAyah) {
+    async handleAyahClick(ayah, translationAyah) {
         this.stateManager.setSelectedAyah(ayah);
         this.stateManager.setHighlightedAyah(ayah.number);
         
         // Play audio if controller
         if (this.isController) {
-            this.audioManager.playAyah(ayah.number, this.stateManager.getState().currentSurah);
+            await this.audioManager.playAyah(ayah.number, this.stateManager.getState().currentSurah);
         }
         
         // Broadcast state if controller
         if (this.isController) {
+            console.log('Broadcasting Quran and audio state after ayah click');
             this.broadcastQuranState();
+            this.broadcastAudioState();
         }
     }
     
@@ -302,16 +375,27 @@ class QuranApp {
         // Broadcast state if controller
         if (this.isController) {
             this.broadcastQuranState();
+            this.broadcastAudioState();
         }
     }
     
     // Audio control
     toggleAudio() {
         this.audioManager.togglePlayPause();
+        
+        // Broadcast audio state if controller
+        if (this.isController) {
+            this.broadcastAudioState();
+        }
     }
     
     stopAudio() {
         this.audioManager.stop();
+        
+        // Broadcast audio state if controller
+        if (this.isController) {
+            this.broadcastAudioState();
+        }
     }
     
     // Controller messaging
@@ -337,24 +421,59 @@ class QuranApp {
     broadcastAudioState() {
         if (this.isController) {
             const audioState = this.stateManager.getAudioState();
+            console.log('Broadcasting audio state:', audioState);
             this.webrtcManager.broadcastAudioState(audioState);
         }
     }
     
     applyQuranState(state) {
+        console.log('Applying Quran state:', state);
         this.stateManager.setQuranState(state);
-        this.uiManager.updateFromQuranState(state);
+        
+        // If we're not the controller, load the content
+        if (!this.isController) {
+            if (state.currentSurah) {
+                console.log('Loading surah content for client:', state.currentSurah, 'with translation:', state.currentTranslation);
+                // Use the translation from the received state
+                this.loadSurahWithTranslation(state.currentSurah, state.currentTranslation);
+            } else if (state.currentPage) {
+                console.log('Loading page content for client:', state.currentPage, 'with translation:', state.currentTranslation);
+                // Use the translation from the received state
+                this.loadPageWithTranslation(state.currentPage, state.currentTranslation);
+            }
+        } else {
+            // Controller just updates UI
+            this.uiManager.updateFromQuranState(state);
+        }
         
         // Update audio if needed
         if (state.highlightedAyah) {
-            this.uiManager.highlightAyah(state.highlightedAyah);
+            // Add a small delay to ensure DOM is ready
+            setTimeout(() => {
+                this.uiManager.highlightAyah(state.highlightedAyah);
+                
+                // Also update translation display if there's a selected ayah
+                if (state.selectedAyah) {
+                    const translationAyah = this.getTranslationForAyah(state.selectedAyah.number);
+                    this.uiManager.updateTranslationDisplay(state.selectedAyah, translationAyah);
+                }
+            }, 100);
         }
     }
     
-    applyAudioState(audioState) {
+    async applyAudioState(audioState) {
         this.stateManager.setAudioState(audioState);
-        this.audioManager.applyAudioState(audioState);
+        await this.audioManager.applyAudioState(audioState);
         this.uiManager.updateAudioState(audioState.isPlaying, audioState.isPaused, audioState.reciter);
+    }
+    
+    // Helper method to get translation for a specific ayah
+    getTranslationForAyah(ayahNumber) {
+        const state = this.stateManager.getState();
+        if (state.translationText && state.translationText.length > 0) {
+            return state.translationText.find(ayah => ayah.number === ayahNumber);
+        }
+        return null;
     }
     
     // State change handlers
@@ -397,6 +516,7 @@ class QuranApp {
     isConnected() {
         return this.webrtcManager.connections.size > 0 || this.webrtcManager.isHost;
     }
+    
 }
 
 // Initialize the application when the page loads

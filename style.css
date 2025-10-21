@@ -27,9 +27,9 @@ body {
 }
 
 .quran-text .ayah.highlighted {
-    background-color: #dbeafe;
-    border: 2px solid #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: #dbeafe !important;
+    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 .quran-text .ayah-number {
@@ -48,9 +48,10 @@ body {
 }
 
 .quran-text .ayah.highlighted .ayah-number {
-    background-color: #1d4ed8;
-    transform: scale(1.1);
+    background-color: #1d4ed8 !important;
+    transform: scale(1.1) !important;
 }
+
 
 /* Arabic Text Selection */
 .quran-text::selection {

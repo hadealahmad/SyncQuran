@@ -36,9 +36,122 @@ class WebRTCManager {
     }
     
     setupSignalingServer() {
-        // For local development, use fallback signaling directly
-        console.log('Setting up local signaling for Quran app');
-        this.setupFallbackSignaling();
+        // Try WebSocket signaling first, fallback to localStorage
+        const signalingUrl = this.getSignalingUrl();
+        
+        if (signalingUrl) {
+            console.log('Setting up WebSocket signaling:', signalingUrl);
+            this.setupWebSocketSignaling(signalingUrl);
+        } else {
+            console.log('Setting up local signaling for Quran app');
+            this.setupFallbackSignaling();
+        }
+    }
+    
+    getSignalingUrl() {
+        // Check for environment-specific signaling server
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'ws://localhost:8081/signaling';
+        }
+        
+        // For production, you would use a real signaling server
+        // return 'wss://your-signaling-server.com/signaling';
+        
+        return null; // Use fallback
+    }
+    
+    setupWebSocketSignaling(url) {
+        try {
+            this.signalingServer = new WebSocket(url);
+            
+            this.signalingServer.onopen = () => {
+                console.log('WebSocket signaling connected');
+                this.updateConnectionStatus('Signaling Connected');
+            };
+            
+            this.signalingServer.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    this.handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+            
+            this.signalingServer.onclose = () => {
+                console.log('WebSocket signaling disconnected');
+                this.updateConnectionStatus('Signaling Disconnected');
+                
+                // Try to reconnect after 3 seconds
+                setTimeout(() => {
+                    if (!this.signalingServer || this.signalingServer.readyState === WebSocket.CLOSED) {
+                        console.log('Attempting to reconnect...');
+                        this.setupWebSocketSignaling(url);
+                    }
+                }, 3000);
+            };
+            
+            this.signalingServer.onerror = (error) => {
+                console.error('WebSocket signaling error:', error);
+                this.updateConnectionStatus('Signaling Error');
+                
+                // Fallback to localStorage if WebSocket fails
+                console.log('Falling back to localStorage signaling');
+                this.setupFallbackSignaling();
+            };
+            
+        } catch (error) {
+            console.error('Failed to setup WebSocket signaling:', error);
+            console.log('Falling back to localStorage signaling');
+            this.setupFallbackSignaling();
+        }
+    }
+    
+    handleWebSocketMessage(message) {
+        console.log('Received WebSocket message:', message.type);
+        
+        switch (message.type) {
+            case 'room-joined':
+                console.log('Successfully joined room:', message.roomId);
+                this.updateConnectionStatus('Room Joined: ' + message.roomId);
+                break;
+                
+            case 'user-joined':
+                console.log('User joined:', message.userId);
+                
+                // If we're the host, create a peer connection with the new user
+                if (this.isHost && message.userId !== this.localUser?.id) {
+                    console.log('Host creating peer connection for new user:', message.userId);
+                    this.createPeerConnection(message.userId);
+                }
+                
+                if (this.callbacks.onUserJoin) {
+                    this.callbacks.onUserJoin(message.userData);
+                }
+                break;
+                
+            case 'user-left':
+                console.log('User left:', message.userId);
+                if (this.callbacks.onUserLeave) {
+                    this.callbacks.onUserLeave({ id: message.userId });
+                }
+                break;
+                
+            case 'user-update':
+                console.log('User updated:', message.userId);
+                if (this.callbacks.onUserUpdate) {
+                    this.callbacks.onUserUpdate(message.userData);
+                }
+                break;
+                
+            case 'offer':
+            case 'answer':
+            case 'ice-candidate':
+                // Handle WebRTC signaling messages
+                console.log('Processing WebRTC message:', message.type, 'from:', message.from);
+                this.handleSignalingMessage(message);
+                break;
+        }
     }
     
     setupFallbackSignaling() {
@@ -47,8 +160,10 @@ class WebRTCManager {
             send: (data) => {
                 const key = 'quran_signaling_' + this.roomId;
                 const messages = JSON.parse(localStorage.getItem(key) || '[]');
-                messages.push(JSON.parse(data));
+                const messageData = JSON.parse(data);
+                messages.push(messageData);
                 localStorage.setItem(key, JSON.stringify(messages));
+                console.log('Sent signaling message:', messageData.type, 'to key:', key);
             },
             close: () => {
                 if (this.pollingInterval) {
@@ -57,9 +172,6 @@ class WebRTCManager {
             },
             readyState: 1 // OPEN
         };
-        
-        // Start polling for messages
-        this.startLocalPolling();
         
         this.updateConnectionStatus('Local Mode');
     }
@@ -77,9 +189,15 @@ class WebRTCManager {
             const key = 'quran_signaling_' + this.roomId;
             const messages = JSON.parse(localStorage.getItem(key) || '[]');
             
+            if (messages.length > this.lastMessageIndex) {
+                console.log(`Found ${messages.length - this.lastMessageIndex} new messages in ${key}`);
+            }
+            
             // Process new messages
             for (let i = this.lastMessageIndex; i < messages.length; i++) {
                 const message = messages[i];
+                console.log('Processing message:', message.type, 'from:', message.from, 'to:', message.target);
+                
                 // Don't process our own messages
                 if (message.from !== this.localUser?.id) {
                     this.handleSignalingMessage(message);
@@ -98,9 +216,6 @@ class WebRTCManager {
         this.roomId = this.generateRoomId();
         this.isHost = true;
         
-        // Clear any existing signaling data for this room
-        localStorage.removeItem('quran_signaling_' + this.roomId);
-        
         this.localUser = {
             id: this.generateUserId(),
             name: userName,
@@ -108,9 +223,28 @@ class WebRTCManager {
             isHost: true
         };
         
-        // Start polling for local signaling if using fallback
+        // Clear any existing signaling data for this room (fallback only)
         if (this.signalingServer && this.signalingServer.send) {
+            localStorage.removeItem('quran_signaling_' + this.roomId);
             this.startLocalPolling();
+        }
+        
+        // Join room via WebSocket or fallback
+        if (this.signalingServer && this.signalingServer.readyState === WebSocket.OPEN) {
+            this.sendWebSocketMessage({
+                type: 'join-room',
+                roomId: this.roomId,
+                userId: this.localUser.id,
+                isHost: true,
+                userData: this.localUser
+            });
+        } else if (this.signalingServer && this.signalingServer.send) {
+            // Fallback to localStorage
+            this.sendSignalingMessage({
+                type: 'user-join',
+                userData: this.localUser,
+                from: this.localUser.id
+            });
         }
         
         this.updateConnectionStatus('Room Created: ' + this.roomId);
@@ -142,13 +276,30 @@ class WebRTCManager {
             this.startLocalPolling();
         }
         
-        // Send join request to find host
-        this.sendSignalingMessage({
-            type: 'join-request',
-            userData: this.localUser,
-            from: this.localUser.id,
-            roomId: roomId
-        });
+        // Join room via WebSocket or fallback
+        if (this.signalingServer && this.signalingServer.readyState === WebSocket.OPEN) {
+            this.sendWebSocketMessage({
+                type: 'join-room',
+                roomId: this.roomId,
+                userId: this.localUser.id,
+                isHost: false,
+                userData: this.localUser
+            });
+        } else if (this.signalingServer && this.signalingServer.send) {
+            // Fallback to localStorage
+            this.sendSignalingMessage({
+                type: 'join-request',
+                userData: this.localUser,
+                from: this.localUser.id,
+                roomId: roomId
+            });
+            
+            this.sendSignalingMessage({
+                type: 'user-join',
+                userData: this.localUser,
+                from: this.localUser.id
+            });
+        }
         
         this.updateConnectionStatus('Joining Room: ' + roomId);
         
@@ -158,26 +309,46 @@ class WebRTCManager {
     }
     
     async createPeerConnection(peerId) {
+        console.log(`Creating peer connection with ${peerId}`);
+        
+        // Check if connection already exists
+        if (this.connections.has(peerId)) {
+            console.log(`Connection with ${peerId} already exists`);
+            return this.connections.get(peerId).pc;
+        }
+        
         const pc = new RTCPeerConnection(this.rtcConfig);
         
         // Create data channel for Quran data
         const dataChannel = pc.createDataChannel('quranData', {
-            ordered: false, // Allow out-of-order delivery for better performance
-            maxRetransmits: 0 // Don't retransmit old data
+            ordered: true, // Ensure messages arrive in order for synchronization
+            // Don't set maxRetransmits or maxPacketLifeTime for reliable delivery
         });
         
         dataChannel.onopen = () => {
             console.log(`Data channel opened with ${peerId}`);
             this.updateConnectionStatus('Connected');
+            
+            // Send initial user data
+            this.broadcastUserUpdate();
         };
         
         dataChannel.onmessage = (event) => {
-            this.handleQuranMessage(JSON.parse(event.data), peerId);
+            try {
+                const data = JSON.parse(event.data);
+                this.handleQuranMessage(data, peerId);
+            } catch (error) {
+                console.error('Error parsing message from', peerId, ':', error);
+            }
         };
         
         dataChannel.onclose = () => {
             console.log(`Data channel closed with ${peerId}`);
             this.handleUserDisconnect(peerId);
+        };
+        
+        dataChannel.onerror = (error) => {
+            console.error(`Data channel error with ${peerId}:`, error);
         };
         
         // Handle incoming data channels
@@ -194,15 +365,27 @@ class WebRTCManager {
             channel.onopen = () => {
                 console.log(`Incoming data channel opened with ${peerId}`);
                 this.updateConnectionStatus('Connected');
+                
+                // Send initial user data
+                this.broadcastUserUpdate();
             };
             
             channel.onmessage = (event) => {
-                this.handleQuranMessage(JSON.parse(event.data), peerId);
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleQuranMessage(data, peerId);
+                } catch (error) {
+                    console.error('Error parsing incoming message from', peerId, ':', error);
+                }
             };
             
             channel.onclose = () => {
                 console.log(`Incoming data channel closed with ${peerId}`);
                 this.handleUserDisconnect(peerId);
+            };
+            
+            channel.onerror = (error) => {
+                console.error(`Incoming data channel error with ${peerId}:`, error);
             };
         };
         
@@ -222,7 +405,9 @@ class WebRTCManager {
             console.log(`Connection state with ${peerId}:`, pc.connectionState);
             if (pc.connectionState === 'connected') {
                 this.updateConnectionStatus('Connected');
+                console.log(`Successfully connected to ${peerId}`);
             } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                console.log(`Connection lost with ${peerId}:`, pc.connectionState);
                 this.handleUserDisconnect(peerId);
             }
         };
@@ -232,15 +417,23 @@ class WebRTCManager {
         // Create offer if we're the host (initiator)
         if (this.isHost) {
             console.log('Host creating offer for:', peerId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            
-            this.sendSignalingMessage({
-                type: 'offer',
-                offer: offer,
-                target: peerId,
-                from: this.localUser.id
-            });
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                const offerMessage = {
+                    type: 'offer',
+                    offer: offer,
+                    target: peerId,
+                    from: this.localUser.id
+                };
+                
+                console.log('Sending offer message:', offerMessage);
+                this.sendSignalingMessage(offerMessage);
+                console.log('Offer sent to:', peerId);
+            } catch (error) {
+                console.error('Error creating offer:', error);
+            }
         }
         
         return pc;
@@ -258,37 +451,57 @@ class WebRTCManager {
                     if (this.isHost && message.roomId === this.roomId) {
                         console.log('Host received join request from:', peerId);
                         await this.createPeerConnection(peerId);
+                        
+                        // Send user data to the new peer
+                        this.sendSignalingMessage({
+                            type: 'user-join',
+                            userData: this.localUser,
+                            target: peerId,
+                            from: this.localUser.id
+                        });
                     }
                     break;
                     
                 case 'offer':
                     if (!message.target || message.target !== this.localUser?.id) return;
                     
+                    console.log('Received offer from:', peerId);
                     let connection = this.connections.get(peerId);
                     if (!connection) {
                         await this.createPeerConnection(peerId);
                         connection = this.connections.get(peerId);
                     }
                     
-                    const pc = connection.pc;
-                    await pc.setRemoteDescription(message.offer);
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    
-                    this.sendSignalingMessage({
-                        type: 'answer',
-                        answer: answer,
-                        target: peerId,
-                        from: this.localUser.id
-                    });
+                    try {
+                        const pc = connection.pc;
+                        await pc.setRemoteDescription(message.offer);
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        
+                        this.sendSignalingMessage({
+                            type: 'answer',
+                            answer: answer,
+                            target: peerId,
+                            from: this.localUser.id
+                        });
+                        console.log('Answer sent to:', peerId);
+                    } catch (error) {
+                        console.error('Error handling offer:', error);
+                    }
                     break;
                     
                 case 'answer':
                     if (!message.target || message.target !== this.localUser?.id) return;
                     
+                    console.log('Received answer from:', peerId);
                     const answerConnection = this.connections.get(peerId);
                     if (answerConnection) {
-                        await answerConnection.pc.setRemoteDescription(message.answer);
+                        try {
+                            await answerConnection.pc.setRemoteDescription(message.answer);
+                            console.log('Answer processed for:', peerId);
+                        } catch (error) {
+                            console.error('Error processing answer:', error);
+                        }
                     }
                     break;
                     
@@ -306,8 +519,20 @@ class WebRTCManager {
         }
     }
     
+    sendWebSocketMessage(message) {
+        if (this.signalingServer && this.signalingServer.readyState === WebSocket.OPEN) {
+            this.signalingServer.send(JSON.stringify(message));
+        } else {
+            console.warn('WebSocket not ready, message not sent:', message);
+        }
+    }
+    
     sendSignalingMessage(message) {
-        if (this.signalingServer && this.signalingServer.readyState === 1) {
+        if (this.signalingServer && this.signalingServer.readyState === WebSocket.OPEN) {
+            // Use WebSocket for signaling
+            this.sendWebSocketMessage(message);
+        } else if (this.signalingServer && this.signalingServer.send) {
+            // Fallback to localStorage
             this.signalingServer.send(JSON.stringify(message));
         }
     }
@@ -510,6 +735,48 @@ class WebRTCManager {
         this.localUser = null;
         
         this.updateConnectionStatus('Disconnected');
+    }
+    
+    // Debug function to check connection status
+    getDebugInfo() {
+        return {
+            isHost: this.isHost,
+            roomId: this.roomId,
+            localUser: this.localUser,
+            connections: Array.from(this.connections.keys()),
+            remoteUsers: Array.from(this.remoteUsers.keys()),
+            signalingData: this.getSignalingData()
+        };
+    }
+    
+    getSignalingData() {
+        if (!this.roomId) return null;
+        const key = 'quran_signaling_' + this.roomId;
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        console.log(`Getting signaling data for key: ${key}, found ${data.length} messages`);
+        return data;
+    }
+    
+    // Test function to verify signaling
+    testSignaling() {
+        if (!this.roomId) {
+            console.log('No room ID set');
+            return;
+        }
+        
+        const key = 'quran_signaling_' + this.roomId;
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        console.log(`=== Signaling Test for ${key} ===`);
+        console.log(`Room ID: ${this.roomId}`);
+        console.log(`Key: ${key}`);
+        console.log(`Messages: ${data.length}`);
+        console.log(`Data:`, data);
+        
+        // Check if we can read other room keys
+        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('quran_signaling_'));
+        console.log(`All signaling keys:`, allKeys);
+        
+        return { key, data, allKeys };
     }
 }
 

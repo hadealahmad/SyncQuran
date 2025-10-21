@@ -32,7 +32,6 @@ class UIManager {
         // Connection elements
         this.connectionStatus = document.getElementById('connectionStatus');
         this.statusText = document.getElementById('statusText');
-        this.roomIdInput = document.getElementById('roomId');
         this.createRoomBtn = document.getElementById('createRoom');
         this.joinRoomBtn = document.getElementById('joinRoom');
         
@@ -71,17 +70,101 @@ class UIManager {
         
         // Loading overlay
         this.loadingOverlay = document.getElementById('loadingOverlay');
+        
+        // Room information elements
+        this.roomInfo = document.getElementById('roomInfo');
+        this.roomIdDisplay = document.getElementById('roomIdDisplay');
+        this.peerIdDisplay = document.getElementById('peerIdDisplay');
+        this.copyRoomIdBtn = document.getElementById('copyRoomId');
+        this.copyPeerIdBtn = document.getElementById('copyPeerId');
+        
+        // Modal elements
+        this.userNameModal = document.getElementById('userNameModal');
+        this.userNameInput = document.getElementById('userNameInput');
+        this.cancelUserNameBtn = document.getElementById('cancelUserName');
+        this.confirmUserNameBtn = document.getElementById('confirmUserName');
+        
+        this.hostPeerIdModal = document.getElementById('hostPeerIdModal');
+        this.roomIdCopy = document.getElementById('roomIdCopy');
+        this.hostPeerIdCopy = document.getElementById('hostPeerIdCopy');
+        this.copyRoomIdBtn = document.getElementById('copyRoomId');
+        this.copyHostPeerIdBtn = document.getElementById('copyHostPeerId');
+        this.closeHostModalBtn = document.getElementById('closeHostModal');
+        
+        this.joinRoomModal = document.getElementById('joinRoomModal');
+        this.joinRoomIdInput = document.getElementById('joinRoomIdInput');
+        this.joinHostPeerIdInput = document.getElementById('joinHostPeerIdInput');
+        this.joinUserNameInput = document.getElementById('joinUserNameInput');
+        this.cancelJoinRoomBtn = document.getElementById('cancelJoinRoom');
+        this.confirmJoinRoomBtn = document.getElementById('confirmJoinRoom');
     }
     
     setupEventListeners() {
         // Connection events
         this.createRoomBtn.addEventListener('click', () => {
-            this.handleCreateRoom();
+            this.showUserNameModal('create');
         });
         
         this.joinRoomBtn.addEventListener('click', () => {
-            this.handleJoinRoom();
+            this.showJoinRoomModal();
         });
+        
+        // Modal events
+        this.cancelUserNameBtn.addEventListener('click', () => {
+            this.hideUserNameModal();
+        });
+        
+        this.confirmUserNameBtn.addEventListener('click', () => {
+            this.handleUserNameConfirm();
+        });
+        
+        this.cancelJoinRoomBtn.addEventListener('click', () => {
+            this.hideJoinRoomModal();
+        });
+        
+        this.confirmJoinRoomBtn.addEventListener('click', () => {
+            this.handleJoinRoomConfirm();
+        });
+        
+        this.closeHostModalBtn.addEventListener('click', () => {
+            this.hideHostPeerIdModal();
+        });
+        
+        // Copy buttons
+        this.copyRoomIdBtn.addEventListener('click', () => {
+            this.copyToClipboard(this.roomIdDisplay.textContent);
+        });
+        
+        this.copyPeerIdBtn.addEventListener('click', () => {
+            this.copyToClipboard(this.peerIdDisplay.textContent);
+        });
+        
+        
+        // Enter key handlers
+        this.userNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleUserNameConfirm();
+            }
+        });
+        
+        this.joinRoomIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleJoinRoomConfirm();
+            }
+        });
+        
+        this.joinHostPeerIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleJoinRoomConfirm();
+            }
+        });
+        
+        this.joinUserNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.handleJoinRoomConfirm();
+            }
+        });
+        
         
         // Navigation events
         this.surahSelect.addEventListener('change', (e) => {
@@ -244,26 +327,114 @@ class UIManager {
     }
     
     // Event handlers
-    handleCreateRoom() {
-        const userName = prompt('أدخل اسمك:') || 'مستخدم';
-        if (this.callbacks.onCreateRoom) {
+    // Modal management methods
+    showUserNameModal(action) {
+        this.currentAction = action;
+        this.userNameInput.value = '';
+        this.userNameModal.classList.remove('hidden');
+        this.userNameInput.focus();
+    }
+    
+    hideUserNameModal() {
+        this.userNameModal.classList.add('hidden');
+    }
+    
+    showJoinRoomModal() {
+        this.joinRoomIdInput.value = '';
+        this.joinHostPeerIdInput.value = '';
+        this.joinUserNameInput.value = '';
+        this.joinRoomModal.classList.remove('hidden');
+        this.joinRoomIdInput.focus();
+    }
+    
+    hideJoinRoomModal() {
+        this.joinRoomModal.classList.add('hidden');
+    }
+    
+    showHostPeerIdModal(roomId, hostPeerId) {
+        this.roomIdCopy.value = roomId;
+        this.hostPeerIdCopy.value = hostPeerId;
+        this.hostPeerIdModal.classList.remove('hidden');
+    }
+    
+    hideHostPeerIdModal() {
+        this.hostPeerIdModal.classList.add('hidden');
+    }
+    
+    handleUserNameConfirm() {
+        const userName = this.userNameInput.value.trim() || 'مستخدم';
+        this.hideUserNameModal();
+        
+        if (this.currentAction === 'create' && this.callbacks.onCreateRoom) {
             this.callbacks.onCreateRoom(userName);
         }
     }
     
-    handleJoinRoom() {
-        const roomId = this.roomIdInput.value.trim();
-        const userName = prompt('أدخل اسمك:') || 'مستخدم';
+    handleJoinRoomConfirm() {
+        const roomId = this.joinRoomIdInput.value.trim();
+        const hostPeerId = this.joinHostPeerIdInput.value.trim();
+        const userName = this.joinUserNameInput.value.trim() || 'مستخدم';
         
         if (!roomId) {
             alert('يرجى إدخال رقم الغرفة');
+            this.joinRoomIdInput.focus();
             return;
         }
         
+        if (!hostPeerId) {
+            alert('يرجى إدخال معرف المضيف');
+            this.joinHostPeerIdInput.focus();
+            return;
+        }
+        
+        this.hideJoinRoomModal();
+        
         if (this.callbacks.onJoinRoom) {
-            this.callbacks.onJoinRoom(roomId, userName);
+            this.callbacks.onJoinRoom(roomId, userName, hostPeerId);
         }
     }
+    
+    // Room information display
+    showRoomInfo(roomId, peerId) {
+        this.roomIdDisplay.textContent = roomId;
+        this.peerIdDisplay.textContent = peerId;
+        this.roomInfo.classList.remove('hidden');
+    }
+    
+    hideRoomInfo() {
+        this.roomInfo.classList.add('hidden');
+    }
+    
+    // Copy to clipboard functionality
+    async copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            this.showToast('تم النسخ إلى الحافظة');
+        } catch (error) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showToast('تم النسخ إلى الحافظة');
+        }
+    }
+    
+    
+    showToast(message) {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg z-50';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 3000);
+    }
+    
     
     handleSurahChange(surahNumber) {
         if (surahNumber && this.callbacks.onSurahChange) {
@@ -315,10 +486,6 @@ class UIManager {
     updateConnectionStatus(status, roomId = null) {
         this.statusText.textContent = status;
         
-        if (roomId) {
-            this.roomIdInput.value = roomId;
-        }
-        
         // Update connection indicator
         this.connectionStatus.className = 'w-3 h-3 rounded-full';
         
@@ -357,6 +524,9 @@ class UIManager {
     
     displayQuranText(ayahs, translationAyahs = null) {
         this.quranText.innerHTML = '';
+        
+        // Store translation data for later use
+        this.translationAyahs = translationAyahs;
         
         ayahs.forEach((ayah, index) => {
             const ayahElement = document.createElement('div');
@@ -419,11 +589,30 @@ class UIManager {
     }
     
     highlightAyah(ayahNumber) {
+        console.log('Highlighting ayah:', ayahNumber);
         this.clearHighlight();
-        const ayahElement = document.querySelector(`[data-ayah-number="${ayahNumber}"]`);
+        
+        // Try multiple selectors to find the ayah element
+        let ayahElement = document.querySelector(`[data-ayah-number="${ayahNumber}"]`);
+        if (!ayahElement) {
+            ayahElement = document.querySelector(`.ayah[data-ayah-number="${ayahNumber}"]`);
+        }
+        if (!ayahElement) {
+            ayahElement = document.querySelector(`div[data-ayah-number="${ayahNumber}"]`);
+        }
+        
+        console.log('Found ayah element:', ayahElement);
+        console.log('All ayah elements:', document.querySelectorAll('.ayah'));
+        
         if (ayahElement) {
             ayahElement.classList.add('highlighted');
             this.highlightedAyah = ayahNumber;
+            console.log('Ayah highlighted successfully');
+            console.log('Element classes after highlighting:', ayahElement.className);
+            console.log('Element computed styles:', window.getComputedStyle(ayahElement).backgroundColor);
+        } else {
+            console.log('Ayah element not found for number:', ayahNumber);
+            console.log('Available ayah numbers:', Array.from(document.querySelectorAll('.ayah')).map(el => el.getAttribute('data-ayah-number')));
         }
     }
     

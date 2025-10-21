@@ -98,6 +98,8 @@ class StateManager {
         const oldAudioState = this.getAudioState();
         this.state.audioState = { ...this.state.audioState, ...audioState };
         
+        console.log('State manager audio state updated:', this.state.audioState);
+        
         if (this.callbacks.onAudioStateChange) {
             this.callbacks.onAudioStateChange(audioState, oldAudioState);
         }
