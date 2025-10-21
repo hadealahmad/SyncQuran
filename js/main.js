@@ -25,20 +25,10 @@ class QuranApp {
     
     async initialize() {
         try {
-            console.log('Initializing Quran App...');
-            
-            // Set up callbacks
             this.setupCallbacks();
-            
-            // Load initial data
             await this.loadInitialData();
-            
-            // Load saved state
             this.stateManager.loadFromLocalStorage();
-            
             this.isInitialized = true;
-            console.log('Quran App initialized successfully');
-            
         } catch (error) {
             console.error('Error initializing Quran App:', error);
             this.uiManager.showError('خطأ في تهيئة التطبيق');
@@ -49,12 +39,10 @@ class QuranApp {
         // WebRTC callbacks
         this.webrtcManager.setCallbacks({
             onUserJoin: (user) => {
-                console.log('User joined:', user.name);
                 this.updateParticipantsList();
             },
             
             onUserLeave: (user) => {
-                console.log('User left:', user.name);
                 this.updateParticipantsList();
             },
             
@@ -71,7 +59,6 @@ class QuranApp {
             },
             
             onAudioStateUpdate: (audioState) => {
-                console.log('Received audio state update:', audioState);
                 this.applyAudioState(audioState);
             }
         });
@@ -149,7 +136,7 @@ class QuranApp {
             },
             
             onAyahComplete: (ayahNumber) => {
-                console.log('Ayah completed:', ayahNumber);
+                // Ayah playback completed
             },
             
             onError: (error) => {
@@ -192,16 +179,11 @@ class QuranApp {
             this.audioManager.setController(true);
             this.uiManager.setController(true);
             
-            console.log('Room created:', roomId);
-            
-            // Show the host's peer ID in a modal
             const hostPeerId = this.webrtcManager.getLocalUser()?.id;
             if (hostPeerId) {
                 this.uiManager.showHostPeerIdModal(roomId, hostPeerId);
+                this.uiManager.showRoomInfo(roomId, hostPeerId);
             }
-            
-            // Show room information in the navbar
-            this.uiManager.showRoomInfo(roomId, hostPeerId);
             
         } catch (error) {
             console.error('Error creating room:', error);
@@ -216,9 +198,6 @@ class QuranApp {
             this.audioManager.setController(false);
             this.uiManager.setController(false);
             
-            console.log('Joined room:', roomId);
-            
-            // Show room information in the navbar
             const userPeerId = this.webrtcManager.getLocalUser()?.id;
             this.uiManager.showRoomInfo(roomId, userPeerId);
             
@@ -229,11 +208,11 @@ class QuranApp {
     }
     
     // Content loading
-    async loadSurah(surahNumber) {
+    async loadSurah(surahNumber, translation = null) {
         try {
             this.stateManager.setLoading(true);
-            
-            const surahData = await this.quranAPI.loadSurahData(surahNumber, this.stateManager.getState().currentTranslation);
+            const currentTranslation = translation || this.stateManager.getState().currentTranslation;
+            const surahData = await this.quranAPI.loadSurahData(surahNumber, currentTranslation);
             
             this.stateManager.setCurrentSurah(surahNumber, surahData.surah.name, surahData.surah.englishName);
             this.stateManager.setArabicText(surahData.arabicText);
@@ -242,14 +221,11 @@ class QuranApp {
             this.uiManager.displayQuranText(surahData.arabicText, surahData.translationText);
             this.uiManager.updateSurahTitle(surahData.surah.name, surahNumber);
             
-            // Broadcast state if controller
             if (this.isController) {
                 this.broadcastQuranState();
-                console.log('Broadcasting Quran state after loading surah');
             }
             
             this.stateManager.setLoading(false);
-            
         } catch (error) {
             console.error('Error loading surah:', error);
             this.stateManager.setLoading(false);
@@ -257,34 +233,11 @@ class QuranApp {
         }
     }
     
-    // Load surah with specific translation (for clients)
-    async loadSurahWithTranslation(surahNumber, translation) {
+    async loadPage(pageNumber, translation = null) {
         try {
             this.stateManager.setLoading(true);
-            
-            const surahData = await this.quranAPI.loadSurahData(surahNumber, translation);
-            
-            this.stateManager.setCurrentSurah(surahNumber, surahData.surah.name, surahData.surah.englishName);
-            this.stateManager.setArabicText(surahData.arabicText);
-            this.stateManager.setTranslationText(surahData.translationText);
-            
-            this.uiManager.displayQuranText(surahData.arabicText, surahData.translationText);
-            this.uiManager.updateSurahTitle(surahData.surah.name, surahNumber);
-            
-            this.stateManager.setLoading(false);
-            
-        } catch (error) {
-            console.error('Error loading surah with translation:', error);
-            this.stateManager.setLoading(false);
-            this.uiManager.showError('خطأ في تحميل السورة');
-        }
-    }
-    
-    async loadPage(pageNumber) {
-        try {
-            this.stateManager.setLoading(true);
-            
-            const pageData = await this.quranAPI.loadPageData(pageNumber, this.stateManager.getState().currentTranslation);
+            const currentTranslation = translation || this.stateManager.getState().currentTranslation;
+            const pageData = await this.quranAPI.loadPageData(pageNumber, currentTranslation);
             
             this.stateManager.setCurrentPage(pageNumber);
             this.stateManager.setArabicText(pageData.arabicText);
@@ -294,40 +247,13 @@ class QuranApp {
             this.uiManager.updatePageTitle(pageNumber);
             this.uiManager.updatePageInput(pageNumber);
             
-            // Broadcast state if controller
             if (this.isController) {
                 this.broadcastQuranState();
-                console.log('Broadcasting Quran state after loading page');
             }
             
             this.stateManager.setLoading(false);
-            
         } catch (error) {
             console.error('Error loading page:', error);
-            this.stateManager.setLoading(false);
-            this.uiManager.showError('خطأ في تحميل الصفحة');
-        }
-    }
-    
-    // Load page with specific translation (for clients)
-    async loadPageWithTranslation(pageNumber, translation) {
-        try {
-            this.stateManager.setLoading(true);
-            
-            const pageData = await this.quranAPI.loadPageData(pageNumber, translation);
-            
-            this.stateManager.setCurrentPage(pageNumber);
-            this.stateManager.setArabicText(pageData.arabicText);
-            this.stateManager.setTranslationText(pageData.translationText);
-            
-            this.uiManager.displayQuranText(pageData.arabicText, pageData.translationText);
-            this.uiManager.updatePageTitle(pageNumber);
-            this.uiManager.updatePageInput(pageNumber);
-            
-            this.stateManager.setLoading(false);
-            
-        } catch (error) {
-            console.error('Error loading page with translation:', error);
             this.stateManager.setLoading(false);
             this.uiManager.showError('خطأ في تحميل الصفحة');
         }
@@ -343,9 +269,7 @@ class QuranApp {
             await this.audioManager.playAyah(ayah.number, this.stateManager.getState().currentSurah);
         }
         
-        // Broadcast state if controller
         if (this.isController) {
-            console.log('Broadcasting Quran and audio state after ayah click');
             this.broadcastQuranState();
             this.broadcastAudioState();
         }
@@ -421,38 +345,26 @@ class QuranApp {
     broadcastAudioState() {
         if (this.isController) {
             const audioState = this.stateManager.getAudioState();
-            console.log('Broadcasting audio state:', audioState);
             this.webrtcManager.broadcastAudioState(audioState);
         }
     }
     
     applyQuranState(state) {
-        console.log('Applying Quran state:', state);
         this.stateManager.setQuranState(state);
         
-        // If we're not the controller, load the content
         if (!this.isController) {
             if (state.currentSurah) {
-                console.log('Loading surah content for client:', state.currentSurah, 'with translation:', state.currentTranslation);
-                // Use the translation from the received state
-                this.loadSurahWithTranslation(state.currentSurah, state.currentTranslation);
+                this.loadSurah(state.currentSurah, state.currentTranslation);
             } else if (state.currentPage) {
-                console.log('Loading page content for client:', state.currentPage, 'with translation:', state.currentTranslation);
-                // Use the translation from the received state
-                this.loadPageWithTranslation(state.currentPage, state.currentTranslation);
+                this.loadPage(state.currentPage, state.currentTranslation);
             }
         } else {
-            // Controller just updates UI
             this.uiManager.updateFromQuranState(state);
         }
         
-        // Update audio if needed
         if (state.highlightedAyah) {
-            // Add a small delay to ensure DOM is ready
             setTimeout(() => {
                 this.uiManager.highlightAyah(state.highlightedAyah);
-                
-                // Also update translation display if there's a selected ayah
                 if (state.selectedAyah) {
                     const translationAyah = this.getTranslationForAyah(state.selectedAyah.number);
                     this.uiManager.updateTranslationDisplay(state.selectedAyah, translationAyah);
@@ -522,5 +434,4 @@ class QuranApp {
 // Initialize the application when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.quranApp = new QuranApp();
-    console.log('Quran App instance created and attached to window.quranApp');
 });

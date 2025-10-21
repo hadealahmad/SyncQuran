@@ -81,35 +81,26 @@ class WebRTCManagerPeerJS {
         });
         
         this.peer.on('open', (id) => {
-            console.log(`✅ PeerJS connected with ID: ${id} via ${server.host}`);
             this.updateConnectionStatus('PeerJS Connected');
         });
         
         this.peer.on('connection', (conn) => {
-            console.log('Incoming connection from:', conn.peer);
             this.handleIncomingConnection(conn);
         });
         
         this.peer.on('disconnected', () => {
-            console.log('PeerJS disconnected');
             this.updateConnectionStatus('PeerJS Disconnected');
-            
-            // Try to reconnect
             setTimeout(() => {
                 if (this.peer && this.peer.destroyed) {
-                    console.log('Attempting to reconnect to PeerJS...');
                     this.initializePeer();
                 }
             }, 3000);
         });
         
         this.peer.on('error', (error) => {
-            console.error(`❌ PeerJS error with ${server.host}:`, error);
-            
-            // Try next server
+            console.error(`PeerJS error with ${server.host}:`, error);
             setTimeout(() => {
                 if (this.peer && this.peer.destroyed) {
-                    console.log(`Trying next PeerJS server...`);
                     this.tryPeerJSServers(peerId, servers, index + 1);
                 }
             }, 1000);
@@ -117,29 +108,23 @@ class WebRTCManagerPeerJS {
     }
     
     setupFallbackMode() {
-        console.log('Setting up fallback mode with localStorage signaling');
         this.updateConnectionStatus('Local Mode (No Server)');
         
-        // Create a mock peer object for fallback
         this.peer = {
             id: 'quran_' + Math.random().toString(36).substr(2, 9),
             destroyed: false,
-            connect: (peerId) => {
-                console.log('Fallback: Mock connection to', peerId);
-                return {
-                    peer: peerId,
-                    open: true,
-                    send: (data) => console.log('Fallback: Mock send', data),
-                    close: () => console.log('Fallback: Mock close'),
-                    on: () => {} // Mock event handlers
-                };
-            },
+            connect: (peerId) => ({
+                peer: peerId,
+                open: true,
+                send: (data) => {},
+                close: () => {},
+                on: () => {}
+            }),
             destroy: () => {
                 this.peer.destroyed = true;
             }
         };
         
-        // Start local polling for signaling
         this.startLocalPolling();
     }
     
@@ -156,16 +141,8 @@ class WebRTCManagerPeerJS {
             const key = 'quran_signaling_' + this.roomId;
             const messages = JSON.parse(localStorage.getItem(key) || '[]');
             
-            if (messages.length > this.lastMessageIndex) {
-                console.log(`Found ${messages.length - this.lastMessageIndex} new messages in ${key}`);
-            }
-            
-            // Process new messages
             for (let i = this.lastMessageIndex; i < messages.length; i++) {
                 const message = messages[i];
-                console.log('Processing message:', message.type, 'from:', message.from, 'to:', message.target);
-                
-                // Don't process our own messages
                 if (message.from !== this.localUser?.id) {
                     this.handleSignalingMessage(message);
                 }
@@ -176,18 +153,13 @@ class WebRTCManagerPeerJS {
     }
     
     handleSignalingMessage(message) {
-        console.log('Received signaling message:', message.type, 'from:', message.from);
-        
         const peerId = message.from;
         
         try {
             switch (message.type) {
                 case 'join-request':
-                    // Only host should handle join requests
                     if (this.isHost && message.roomId === this.roomId) {
-                        console.log('Host received join request from:', peerId);
-                        // In fallback mode, we can't create real connections
-                        console.log('Fallback mode: Cannot create real peer connections');
+                        // Fallback mode: Cannot create real peer connections
                     }
                     break;
                     

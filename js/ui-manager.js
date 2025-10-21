@@ -328,37 +328,68 @@ class UIManager {
     
     // Event handlers
     // Modal management methods
+    showModal(modalType, data = {}) {
+        const modals = {
+            userName: () => {
+                this.currentAction = data.action;
+                this.userNameInput.value = '';
+                this.userNameModal.classList.remove('hidden');
+                this.userNameInput.focus();
+            },
+            joinRoom: () => {
+                this.joinRoomIdInput.value = '';
+                this.joinHostPeerIdInput.value = '';
+                this.joinUserNameInput.value = '';
+                this.joinRoomModal.classList.remove('hidden');
+                this.joinRoomIdInput.focus();
+            },
+            hostPeerId: () => {
+                this.roomIdCopy.value = data.roomId;
+                this.hostPeerIdCopy.value = data.hostPeerId;
+                this.hostPeerIdModal.classList.remove('hidden');
+            }
+        };
+        
+        if (modals[modalType]) {
+            modals[modalType]();
+        }
+    }
+    
+    hideModal(modalType) {
+        const modals = {
+            userName: this.userNameModal,
+            joinRoom: this.joinRoomModal,
+            hostPeerId: this.hostPeerIdModal
+        };
+        
+        if (modals[modalType]) {
+            modals[modalType].classList.add('hidden');
+        }
+    }
+    
+    // Legacy methods for backward compatibility
     showUserNameModal(action) {
-        this.currentAction = action;
-        this.userNameInput.value = '';
-        this.userNameModal.classList.remove('hidden');
-        this.userNameInput.focus();
+        this.showModal('userName', { action });
     }
     
     hideUserNameModal() {
-        this.userNameModal.classList.add('hidden');
+        this.hideModal('userName');
     }
     
     showJoinRoomModal() {
-        this.joinRoomIdInput.value = '';
-        this.joinHostPeerIdInput.value = '';
-        this.joinUserNameInput.value = '';
-        this.joinRoomModal.classList.remove('hidden');
-        this.joinRoomIdInput.focus();
+        this.showModal('joinRoom');
     }
     
     hideJoinRoomModal() {
-        this.joinRoomModal.classList.add('hidden');
+        this.hideModal('joinRoom');
     }
     
     showHostPeerIdModal(roomId, hostPeerId) {
-        this.roomIdCopy.value = roomId;
-        this.hostPeerIdCopy.value = hostPeerId;
-        this.hostPeerIdModal.classList.remove('hidden');
+        this.showModal('hostPeerId', { roomId, hostPeerId });
     }
     
     hideHostPeerIdModal() {
-        this.hostPeerIdModal.classList.add('hidden');
+        this.hideModal('hostPeerId');
     }
     
     handleUserNameConfirm() {
@@ -589,30 +620,23 @@ class UIManager {
     }
     
     highlightAyah(ayahNumber) {
-        console.log('Highlighting ayah:', ayahNumber);
         this.clearHighlight();
         
-        // Try multiple selectors to find the ayah element
-        let ayahElement = document.querySelector(`[data-ayah-number="${ayahNumber}"]`);
-        if (!ayahElement) {
-            ayahElement = document.querySelector(`.ayah[data-ayah-number="${ayahNumber}"]`);
-        }
-        if (!ayahElement) {
-            ayahElement = document.querySelector(`div[data-ayah-number="${ayahNumber}"]`);
-        }
+        const selectors = [
+            `[data-ayah-number="${ayahNumber}"]`,
+            `.ayah[data-ayah-number="${ayahNumber}"]`,
+            `div[data-ayah-number="${ayahNumber}"]`
+        ];
         
-        console.log('Found ayah element:', ayahElement);
-        console.log('All ayah elements:', document.querySelectorAll('.ayah'));
+        let ayahElement = null;
+        for (const selector of selectors) {
+            ayahElement = document.querySelector(selector);
+            if (ayahElement) break;
+        }
         
         if (ayahElement) {
             ayahElement.classList.add('highlighted');
             this.highlightedAyah = ayahNumber;
-            console.log('Ayah highlighted successfully');
-            console.log('Element classes after highlighting:', ayahElement.className);
-            console.log('Element computed styles:', window.getComputedStyle(ayahElement).backgroundColor);
-        } else {
-            console.log('Ayah element not found for number:', ayahNumber);
-            console.log('Available ayah numbers:', Array.from(document.querySelectorAll('.ayah')).map(el => el.getAttribute('data-ayah-number')));
         }
     }
     

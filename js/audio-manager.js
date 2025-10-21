@@ -37,14 +37,6 @@ class AudioManager {
     }
     
     setupAudioEvents() {
-        this.audio.addEventListener('loadstart', () => {
-            console.log('Audio loading started');
-        });
-        
-        this.audio.addEventListener('canplay', () => {
-            console.log('Audio can start playing');
-        });
-        
         this.audio.addEventListener('play', () => {
             this.isPlaying = true;
             this.isPaused = false;
@@ -73,7 +65,6 @@ class AudioManager {
                 this.callbacks.onAyahComplete(this.currentAyah);
             }
             
-            // Auto-play next ayah if in queue
             this.playNextInQueue();
         });
         
@@ -107,7 +98,6 @@ class AudioManager {
     setReciter(reciter) {
         this.currentReciter = reciter;
         this.audioState.reciter = reciter;
-        console.log('Reciter set to:', reciter);
     }
     
     /**
@@ -119,18 +109,12 @@ class AudioManager {
             this.currentSurah = surahNumber;
             
             const apiUrl = this.getAyahAudioUrl(ayahNumber);
-            console.log('Fetching audio from API:', apiUrl);
-            
-            // First fetch the API response to get the actual audio URL
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
-            console.log('API response:', data);
-            
-            // Extract the audio URL from the response
             let audioUrl = null;
             if (data.data && data.data.audio) {
                 audioUrl = data.data.audio;
@@ -139,8 +123,6 @@ class AudioManager {
             } else {
                 throw new Error('No audio URL found in API response');
             }
-            
-            console.log('Audio URL:', audioUrl);
             
             await this.loadAudio(audioUrl);
             await this.play();
@@ -331,11 +313,7 @@ class AudioManager {
             timestamp: this.audio.currentTime
         };
         
-        console.log('Audio manager updating state:', this.audioState);
-        
-        // Notify state manager if callback is set
         if (this.callbacks && this.callbacks.onAudioStateChange) {
-            console.log('Notifying state manager of audio state change');
             this.callbacks.onAudioStateChange(this.audioState);
         }
     }
@@ -352,22 +330,14 @@ class AudioManager {
      * Apply audio state from synchronization
      */
     async applyAudioState(audioState) {
-        console.log('Client applying audio state:', audioState);
-        console.log('Client isController:', this.isController);
-        
         if (!this.isController) {
-            // Only listeners should apply external audio state
             this.currentReciter = audioState.reciter;
             this.currentAyah = audioState.currentAyah;
             this.currentSurah = audioState.currentSurah;
             this.currentPage = audioState.currentPage;
             
-            console.log('Client audio state updated - currentAyah:', this.currentAyah, 'isPlaying:', audioState.isPlaying);
-            
-            // If there's a current ayah and we should be playing, load and play it
             if (audioState.isPlaying && this.currentAyah) {
                 try {
-                    console.log('Client loading audio for ayah:', this.currentAyah);
                     await this.playAyah(this.currentAyah, this.currentSurah);
                 } catch (error) {
                     console.error('Error playing ayah on client:', error);
