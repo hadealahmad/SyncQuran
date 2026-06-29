@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>القرآن المتزامن - Synchronized Quran</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
-    
+
     <!-- Arabic Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body class="bg-gray-50 font-amiri">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
@@ -25,38 +28,43 @@
                     <h1 class="text-2xl font-bold text-gray-900">القرآن المتزامن</h1>
                     <span class="ml-3 text-sm text-gray-500">Synchronized Quran</span>
                 </div>
-                
+
                 <!-- Connection Status -->
                 <div class="flex items-center space-x-4 space-x-reverse">
                     <div class="flex items-center space-x-2 space-x-reverse">
                         <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500"></div>
                         <span id="statusText" class="text-sm text-gray-600">غير متصل</span>
                     </div>
-                    
+
                     <!-- Room Information (hidden by default) -->
-                    <div id="roomInfo" class="hidden flex items-center space-x-2 space-x-reverse bg-blue-50 px-3 py-2 rounded-lg">
+                    <div id="roomInfo"
+                        class="hidden flex items-center space-x-2 space-x-reverse bg-blue-50 px-3 py-2 rounded-lg">
                         <div class="text-sm">
                             <span class="text-gray-600">الغرفة:</span>
                             <span id="roomIdDisplay" class="font-mono text-blue-600"></span>
-                            <button id="copyRoomId" class="mr-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
+                            <button id="copyRoomId"
+                                class="mr-2 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">
                                 نسخ
                             </button>
                         </div>
                         <div class="text-sm">
                             <span class="text-gray-600">المعرف:</span>
                             <span id="peerIdDisplay" class="font-mono text-blue-600"></span>
-                            <button id="copyPeerId" class="mr-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                            <button id="copyPeerId"
+                                class="mr-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
                                 نسخ
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Room Controls -->
                     <div class="flex items-center space-x-2 space-x-reverse">
-                        <button id="createRoom" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="createRoom"
+                            class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             إنشاء غرفة
                         </button>
-                        <button id="joinRoom" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <button id="joinRoom"
+                            class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
                             انضمام
                         </button>
                     </div>
@@ -68,69 +76,77 @@
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            
+
             <!-- Left Sidebar - Controls -->
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">التحكم</h3>
-                    
+
                     <!-- Navigation Controls -->
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">السورة</label>
-                            <select id="surahSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="surahSelect"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">اختر السورة</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">الصفحة</label>
                             <div class="flex space-x-2 space-x-reverse">
-                                <button id="prevPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">السابق</button>
-                                <input type="number" id="pageInput" min="1" max="604" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center">
-                                <button id="nextPage" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">التالي</button>
+                                <button id="prevPage"
+                                    class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">السابق</button>
+                                <input type="number" id="pageInput" min="1" max="604"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center">
+                                <button id="nextPage"
+                                    class="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">التالي</button>
                             </div>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">الترجمة</label>
-                            <select id="translationSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="translationSelect"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">اختر الترجمة</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">القارئ</label>
-                            <select id="reciterSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="reciterSelect"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">اختر القارئ</option>
                             </select>
                         </div>
-                        
+
                         <!-- Audio Controls -->
                         <div class="pt-4 border-t border-gray-200">
                             <div class="flex items-center space-x-2 space-x-reverse">
-                                <button id="playPause" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                <button id="playPause"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                     <span id="playIcon">▶️</span>
                                 </button>
-                                <button id="stopAudio" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                                <button id="stopAudio"
+                                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
                                     ⏹️
                                 </button>
                             </div>
                         </div>
-                        
+
                         <!-- Controller Message -->
                         <div class="pt-4 border-t border-gray-200">
                             <label class="block text-sm font-medium text-gray-700 mb-2">رسالة للمستمعين</label>
-                            <textarea id="controllerMessage" placeholder="اكتب رسالة للمستمعين..." 
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"></textarea>
-                            <button id="sendMessage" class="mt-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                            <textarea id="controllerMessage" placeholder="اكتب رسالة للمستمعين..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"></textarea>
+                            <button id="sendMessage"
+                                class="mt-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
                                 إرسال
                             </button>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Participants List -->
                 <div class="mt-4 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">المشاركون</h3>
@@ -139,7 +155,7 @@
                     </ul>
                 </div>
             </div>
-            
+
             <!-- Center - Quran Text -->
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -149,7 +165,7 @@
                             <span id="currentPage">الصفحة 1</span>
                         </div>
                     </div>
-                    
+
                     <!-- Quran Text Container -->
                     <div id="quranText" class="quran-text text-2xl leading-relaxed text-gray-900 min-h-96">
                         <!-- Quran text will be loaded here -->
@@ -159,19 +175,19 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Right Sidebar - Translation -->
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">الترجمة</h3>
-                    
+
                     <!-- Selected Ayah Translation -->
                     <div id="selectedAyahTranslation" class="mb-4 p-4 bg-blue-50 rounded-lg">
                         <div class="text-sm text-gray-600 mb-2">الآية المحددة:</div>
                         <div id="selectedAyahNumber" class="font-semibold text-blue-800 mb-2"></div>
                         <div id="selectedAyahText" class="text-gray-800 leading-relaxed"></div>
                     </div>
-                    
+
                     <!-- Controller Messages -->
                     <div class="mb-4">
                         <h4 class="text-sm font-medium text-gray-700 mb-2">رسائل المرشد</h4>
@@ -179,7 +195,7 @@
                             <!-- Messages will appear here -->
                         </div>
                     </div>
-                    
+
                     <!-- Audio Status -->
                     <div class="pt-4 border-t border-gray-200">
                         <h4 class="text-sm font-medium text-gray-700 mb-2">حالة الصوت</h4>
@@ -193,6 +209,22 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12 py-6">
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 text-sm text-gray-500">
+
+            <div class="flex items-center space-x-4 space-x-reverse">
+                <a href="https://community.itqan.dev/d/68" target="_blank"
+                    class="hover:text-gray-900 transition-colors">عن المشروع</a>
+                <a href="https://community.itqan.dev/d/68" target="_blank"
+                    style="display:inline-flex;border-radius:3px;overflow:hidden;font-size:11px;font-family:monospace;height:20px;line-height:20px;text-decoration:none;"><span
+                        style="background:#10b981;color:#fff;padding:0 8px;font-weight:bold;">itqan</span><span
+                        style="background:#f1f5f9;color:#0f172a;padding:0 8px;">ناقش</span></a>
+            </div>
+        </div>
+    </footer>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg p-6 text-center">
@@ -205,8 +237,8 @@
     <div id="userNameModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">أدخل اسمك</h3>
-            <input type="text" id="userNameInput" placeholder="اسمك" 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+            <input type="text" id="userNameInput" placeholder="اسمك"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
             <div class="flex justify-end space-x-2 space-x-reverse">
                 <button id="cancelUserName" class="px-4 py-2 text-gray-600 hover:text-gray-800">
                     إلغاء
@@ -226,9 +258,10 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">رقم الغرفة:</label>
                     <div class="flex items-center space-x-2 space-x-reverse">
-                        <input type="text" id="roomIdCopy" readonly 
-                               class="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono">
-                        <button id="copyRoomId" class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                        <input type="text" id="roomIdCopy" readonly
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono">
+                        <button id="copyRoomId"
+                            class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
                             نسخ
                         </button>
                     </div>
@@ -236,9 +269,10 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">معرف المضيف:</label>
                     <div class="flex items-center space-x-2 space-x-reverse">
-                        <input type="text" id="hostPeerIdCopy" readonly 
-                               class="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono">
-                        <button id="copyHostPeerId" class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                        <input type="text" id="hostPeerIdCopy" readonly
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 font-mono">
+                        <button id="copyHostPeerId"
+                            class="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
                             نسخ
                         </button>
                     </div>
@@ -260,18 +294,18 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">رقم الغرفة:</label>
-                    <input type="text" id="joinRoomIdInput" placeholder="رقم الغرفة" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="joinRoomIdInput" placeholder="رقم الغرفة"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">معرف المضيف:</label>
-                    <input type="text" id="joinHostPeerIdInput" placeholder="معرف المضيف" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="joinHostPeerIdInput" placeholder="معرف المضيف"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">اسمك:</label>
-                    <input type="text" id="joinUserNameInput" placeholder="اسمك" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="joinUserNameInput" placeholder="اسمك"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
             <div class="flex justify-end space-x-2 space-x-reverse mt-6">
@@ -295,4 +329,5 @@
     <script src="js/state-manager.js"></script>
     <script src="js/main.js"></script>
 </body>
+
 </html>
